@@ -1,28 +1,60 @@
-export default function handler(req, res) {
-  // Mock NFT JSON response
-  const tokens = [
-    {
-      id: "1",
-      name: "Hustler #1",
-      description: "First NFT of true Naija resilience",
-      image: "https://ipfs.io/ipfs/bafkreidcy7n7fthsmzgy6m35e7zqk3m6u4x7qp3kkk7nuzqx2yukp6j5uq",
-    },
-    {
-      id: "2",
-      name: "Hustler #2",
-      description: "Pushing forward against all odds",
-      image: "https://ipfs.io/ipfs/bafkreigh2akiscaildcpld6lmwe2phgzr5bl2uzg5wq6ce5h7quw27l7gq",
-    },
-    {
-      id: "3",
-      name: "Hustler #3",
-      description: "The streets don’t break us — they shape us.",
-      image: "https://ipfs.io/ipfs/bafkreib7wcn5vdg2rjop64sguzk2rs5j2bqms5izclz6dr3i3npnqcyxdu",
-    },
-  ];
+// pages/api/nfts.js
 
-  res.status(200).json({
-    tokens,
-    next: null, // no pagination for now
-  });
+export default async function handler(req, res) {
+  const { after = null, limit = 12 } = req.query;
+
+  const query = `
+    query GetNFTs($limit: Int!, $after: String) {
+      tokens(
+        where: { ownerAddresses: ["0x7a91ef916e6a717a47b46160bc79ab2c4c4be97e"] }
+        networks: [{ network: BASE, chain: MAINNET }]
+        pagination: { limit: $limit, after: $after }
+      ) {
+        nodes {
+          token {
+            tokenId
+            name
+            metadata
+            image {
+              url
+              small { url }
+              large { url }
+            }
+            collectionAddress
+          }
+        }
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch("https://api.zora.co/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // no API key needed
+      body: JSON.stringify({
+        query,
+        variables: { limit: parseInt(limit), after },
+      }),
+    });
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch from Zora" });
+    }
+
+    const json = await response.json();
+
+    const tokens = json.data?.tokens?.nodes?.map((n) => n.token) || [];
+
+    return res.status(200).json({
+      tokens,
+      next: json.data?.tokens?.pageInfo?.endCursor || null,
+    });
+  } catch (err) {
+    console.error("NFT fetch error:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 }
