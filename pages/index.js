@@ -48,7 +48,7 @@ export default function Home() {
       if (loading) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore && after) {
+        if (entries[0].isIntersecting && hasMore) {
           fetchNFTs(after);
         }
       });
@@ -57,67 +57,117 @@ export default function Home() {
     [loading, hasMore, after, fetchNFTs]
   );
 
-  // placeholders
-  const placeholders = Array.from({ length: 6 }, (_, i) => ({
-    id: `placeholder-${i}`,
-    title: `Hustle Story #${i + 1}`,
-  }));
-
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0b1220", color: "#fff" }}>
-      <header style={{ textAlign: "center", padding: "48px 16px" }}>
-        <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ fontSize: "36px", margin: 0 }}>
+    <div className="min-h-screen bg-black text-white">
+      {/* Hero */}
+      <section className="text-center py-20">
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-5xl font-bold"
+        >
           Naija Hustle Stories
         </motion.h1>
-        <p style={{ marginTop: 12, color: "#b8c2c8" }}>A live gallery of NFTs from @nhs (via Zora on Base)</p>
-        <a href="#nft-gallery" style={{ marginTop: 16, display: "inline-block", background: "#10b981", color: "#041014", padding: "10px 18px", borderRadius: 999, fontWeight: 700, textDecoration: "none" }}>
-          🚀 Explore
-        </a>
-      </header>
+        <p className="mt-4 text-xl">NFTs celebrating true Nigerian resilience on Base</p>
+      </section>
 
-      <main id="nft-gallery" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px" }}>
-        <h2 style={{ fontSize: 22, marginBottom: 18, textAlign: "center" }}>Explore the Collection</h2>
+      {/* NFT Gallery */}
+      <section className="px-6 py-12 max-w-6xl mx-auto">
+        <h2 className="text-3xl font-bold mb-6">All NFTs</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
-          { (error || (nfts.length === 0 && !loading)) ? (
-            placeholders.map((p) => (
-              <motion.div key={p.id} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45 }} style={{ background: "#071021", borderRadius: 14, height: 300, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px rgba(2,6,23,0.6)" }}>
-                <div style={{ fontSize: 48, color: "#10b981", fontWeight: 800 }}>$NHS</div>
-                <div style={{ marginTop: 12, color: "#cbd5db", fontWeight: 600 }}>{p.title}</div>
-                <a href="https://zora.co/@nhs" target="_blank" rel="noreferrer" style={{ marginTop: 20, background: "#10b981", color: "#041014", padding: "8px 14px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }}>View on Zora</a>
-              </motion.div>
-            ))
-          ) : (
-            nfts.map((nft, idx) => {
-              // defensive extraction (Zora shape may vary)
-              const token = nft?.token || nft;
-              const tokenId = token?.tokenId ?? token?.id ?? idx;
-              const image = token?.image?.url || token?.metadata?.image || "";
-              const title = token?.metadata?.name || token?.name || `Naija Hustle #${tokenId}`;
+        {error && (
+          <p className="text-red-400">
+            Could not load NFTs. Please try again later.
+          </p>
+        )}
 
-              const isLast = idx === nfts.length - 1;
+        {nfts.length === 0 && !loading && !error && (
+          <p className="text-gray-400">No NFTs found.</p>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {nfts.map((nft, i) => {
+            const imgSrc =
+              nft.token.image?.url ||
+              nft.token.image?.small?.url ||
+              nft.token.image?.large?.url ||
+              nft.token.metadata?.image ||
+              "/placeholder.png";
+
+            if (i === nfts.length - 1) {
               return (
-                <motion.article key={`${tokenId}-${idx}`} ref={isLast ? lastNFTRef : null} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: idx * 0.02 }} style={{ background: "#071021", borderRadius: 14, overflow: "hidden", boxShadow: "0 6px 18px rgba(2,6,23,0.6)", display: "flex", flexDirection: "column" }}>
-                  <div style={{ height: 200, background: "#0b1117", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {image ? <img src={image} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ color: "#7b8794" }}>No preview</div>}
+                <div
+                  key={`${nft.token.contract.address}-${nft.token.tokenId}`}
+                  ref={lastNFTRef}
+                  className="rounded-2xl shadow-lg overflow-hidden bg-gray-900 hover:scale-105 transition flex flex-col"
+                >
+                  <img
+                    src={imgSrc}
+                    alt={nft.token.name || "NFT"}
+                    className="w-full h-64 object-cover"
+                  />
+                  <div className="p-4 flex flex-col flex-grow justify-between">
+                    <h3 className="text-lg font-bold mb-2">{nft.token.name}</h3>
+                    <a
+                      href={`https://zora.co/collect/base:${nft.token.contract.address}/${nft.token.tokenId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-auto inline-block text-center bg-emerald-400 text-black px-4 py-2 rounded-xl font-semibold hover:scale-105 transition"
+                    >
+                      View on Zora
+                    </a>
                   </div>
-                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, flexGrow: 1 }}>
-                    <div style={{ fontWeight: 700 }}>{title}</div>
-                    <div style={{ marginTop: "auto" }}>
-                      <a href={`https://zora.co/collect/${token?.contract?.address ?? token?.contract ?? ""}/${tokenId}`} target="_blank" rel="noreferrer" style={{ background: "#10b981", color: "#041014", padding: "8px 12px", borderRadius: 10, textDecoration: "none", fontWeight: 700 }}>View on Zora</a>
-                    </div>
-                  </div>
-                </motion.article>
+                </div>
               );
-            })
-          )}
+            } else {
+              return (
+                <div
+                  key={`${nft.token.contract.address}-${nft.token.tokenId}`}
+                  className="rounded-2xl shadow-lg overflow-hidden bg-gray-900 hover:scale-105 transition flex flex-col"
+                >
+                  <img
+                    src={imgSrc}
+                    alt={nft.token.name || "NFT"}
+                    className="w-full h-64 object-cover"
+                  />
+                  <div className="p-4 flex flex-col flex-grow justify-between">
+                    <h3 className="text-lg font-bold mb-2">{nft.token.name}</h3>
+                    <a
+                      href={`https://zora.co/collect/base:${nft.token.contract.address}/${nft.token.tokenId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-auto inline-block text-center bg-emerald-400 text-black px-4 py-2 rounded-xl font-semibold hover:scale-105 transition"
+                    >
+                      View on Zora
+                    </a>
+                  </div>
+                </div>
+              );
+            }
+          })}
+
+          {/* Animated placeholders while loading */}
+          {loading &&
+            Array.from({ length: 6 }).map((_, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0.3 }}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="rounded-2xl shadow-lg overflow-hidden bg-gray-800 flex items-center justify-center h-64"
+              >
+                <span className="text-2xl font-bold text-emerald-400">
+                  $NHS
+                </span>
+              </motion.div>
+            ))}
         </div>
+      </section>
 
-        {loading && <p style={{ textAlign: "center", marginTop: 18, color: "#9aa6b0" }}>Loading more…</p>}
-      </main>
-
-      <footer style={{ textAlign: "center", padding: 24, color: "#93a1a8" }}>
-        © {new Date().getFullYear()} Naija Hustle Stories — Built on Zora + Base
+      {/* Footer */}
+      <footer className="text-center py-6 text-gray-400">
+        <p>© {new Date().getFullYear()} Naija Hustle Stories — Built on Base with Zora</p>
       </footer>
     </div>
   );
